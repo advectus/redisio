@@ -98,7 +98,7 @@ def configure
     recipe_eval do
       include_recipe 'selinux_policy::install' if use_selinux
 
-      server_name = current['name'] || current['port']
+      server_name = nil#current['name'] || current['port']
       piddir = "#{base_piddir}/#{server_name}"
       aof_file = current['appendfilename'] || "#{current['datadir']}/appendonly-#{server_name}.aof"
       rdb_file = current['dbfilename'] || "#{current['datadir']}/dump-#{server_name}.rdb"
@@ -307,11 +307,13 @@ def configure
       end
 
       # Setup init.d file
-      bin_path = if node['redisio']['install_dir']
-                   ::File.join(node['redisio']['install_dir'], 'bin')
-                 else
-                   node['redisio']['bin_path']
-                 end
+      #bin_path = if node['redisio']['install_dir']
+      #             ::File.join(node['redisio']['install_dir'], 'bin')
+      #           else
+      #             node['redisio']['bin_path']
+      #           end
+
+      bin_path = "/usr/local/bin/"
 
       case node['redisio']['job_control']
       when 'initd'
@@ -371,22 +373,22 @@ def configure
           )
         end
       when 'systemd'
-        service_name = "redis@#{server_name}"
-        reload_name = "#{service_name} systemd reload"
+        #service_name = "redis"
+        #reload_name = "#{service_name} systemd reload"
 
-        file "/etc/tmpfiles.d/#{service_name}.conf" do
-          content "d #{piddir} 0755 #{current['user']} #{current['group']}\n"
-          owner 'root'
-          group 'root'
-          mode '0644'
-        end
+        #file "/etc/tmpfiles.d/redis.conf" do
+        #  content "d #{piddir} 0755 #{current['user']} #{current['group']}\n"
+        #  owner 'root'
+        #  group 'root'
+        #  mode '0644'
+        #end
 
-        execute reload_name do
-          command 'systemctl daemon-reload'
-          action :nothing
-        end
+        #execute reload_name do
+        #  command 'systemctl daemon-reload'
+        #  action :nothing
+        #end
 
-        template "/lib/systemd/system/#{service_name}.service" do
+        template "/etc/systemd/system/redis#{server_name}.service" do
           source 'redis@.service.erb'
           cookbook 'redisio'
           owner 'root'
@@ -396,9 +398,8 @@ def configure
             bin_path: bin_path,
             user: current['user'],
             group: current['group'],
-            limit_nofile: descriptors
           )
-          notifies :run, "execute[#{reload_name}]", :immediately
+          #notifies :run, "execute[#{reload_name}]", :immediately
         end
       end
     end
